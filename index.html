@@ -6,6 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Riscossione">
+<meta name="theme-color" content="#1A3A5C">
+<link rel="manifest" href="manifest.json">
 <title>Riscossione</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -191,6 +193,10 @@
     </button>
     <input type="file" id="input-file" accept=".xlsx,.xls" onchange="caricaFile(this)">
     <button class="btn-istr-apri" onclick="apriIstruzioni()">📲 Come installare l'app sul telefono</button>
+    <button class="btn-primario" id="btn-installa-android" style="display:none; margin-top:10px; background:var(--verde)" onclick="installaPWA()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Installa app sul telefono
+    </button>
     <div class="sessione-info" id="sessione-info" style="display:none">
       <strong id="sessione-nome"></strong>
       <span id="sessione-stato"></span>
@@ -638,11 +644,12 @@ function generaWorkbook() {
 }
 
 function inviaEmail() {
-  const oggi = new Date().toISOString().split('T')[0];
+  const ora = new Date();
+  const dataFormattata = `${pad(ora.getDate())}/${pad(ora.getMonth()+1)}/${ora.getFullYear()}`;
   const pagate = Object.keys(dati.pagamenti).length;
-  const subject = encodeURIComponent(`Report incassi ${oggi}`);
+  const subject = encodeURIComponent(`Report incassi ${dataFormattata}`);
   const body = encodeURIComponent(
-    `In allegato il report degli incassi del ${oggi}.\n\nFatture pagate: ${pagate}/${dati.righe.length}\n\nFile: report_incassi_${oggi}.xlsx`
+    `In allegato il report degli incassi del ${dataFormattata}.\n\nFatture pagate: ${pagate}/${dati.righe.length}\n\nFile: report_incassi_${dataFormattata.replace(/\//g,'-')}.xlsx`
   );
   scaricaExcel();
   setTimeout(() => {
@@ -671,6 +678,30 @@ function mostraToast(msg) {
 document.getElementById('modal-data').addEventListener('click', function(e) {
   if (e.target === this) chiudiModal();
 });
+
+// ---- SERVICE WORKER (rende l'app installabile) ----
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/riscossione/sw.js').catch(() => {});
+}
+
+// Intercetta evento installazione PWA su Android
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('btn-installa-android');
+  if (btn) btn.style.display = 'block';
+});
+</script>
+
+async function installaPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById('btn-installa-android').style.display = 'none';
+  }
+}
 
 // ---- ISTRUZIONI INSTALLAZIONE ----
 function apriIstruzioni() {
