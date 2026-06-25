@@ -695,12 +695,13 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 </script>
 
-async function installaPWA() {
+function installaPWA() {
   if (deferredPrompt) {
     deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    document.getElementById('btn-installa-android').style.display = 'none';
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+      document.getElementById('btn-installa-android').style.display = 'none';
+    });
   }
 }
 
