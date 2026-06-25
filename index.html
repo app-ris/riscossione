@@ -91,7 +91,7 @@
   .fattura-top { display: flex; justify-content: space-between; align-items: flex-start; }
   .fattura-doc { font-size: 13px; font-weight: 700; color: var(--blu); }
   .fattura-importo { font-size: 18px; font-weight: 700; color: var(--testo); }
-  .fattura-meta { display: flex; gap: 16px; margin-top: 6px; }
+  .fattura-meta { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
   .fattura-meta span { font-size: 12px; color: var(--testo-secondario); }
   .fattura-desc { font-size: 12px; color: var(--testo-secondario); margin-top: 6px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fattura-azione { margin-top: 14px; display: flex; gap: 10px; align-items: center; }
@@ -312,7 +312,7 @@
     <div class="istr-contenuto" id="contenuto-android">
       <div class="istr-step"><div class="istr-num">1</div><div class="istr-step-testo"><strong>Ricevi il file via mail o WhatsApp</strong><span>Scarica il file <span class="istr-pill">app_riscossione.html</span> sul tuo telefono.</span></div></div>
       <div class="istr-step"><div class="istr-num">2</div><div class="istr-step-testo"><strong>Aprilo con Chrome</strong><span>Vai nella cartella Download, tieni premuto il file e scegli <span class="istr-pill">Apri con Chrome</span>.</span></div></div>
-      <div class="istr-step"><div class="istr-num">3</div><div class="istr-step-testo"><strong>Aggiungi alla schermata Home</strong><span>Tocca i tre puntini <span class="istr-pill">⋮</span> in alto a destra → <span class="istr-pill">Aggiungi a schermata Home</span> → Aggiungi.</span></div></div>
+      <div class="istr-step"><div class="istr-num">3</div><div class="istr-step-testo"><strong>Aggiungi alla schermata Home</strong><span>Tocca i tre puntini <span class="istr-pill">⋮</span> in alto a destra → <span class="istr-pill">Aggiungi a</span> → <span class="istr-pill">Schermata Home</span>.<br><br>In alternativa Chrome potrebbe mostrare in basso la barra <span class="istr-pill">Installa app</span> — tocca quella direttamente.</span></div></div>
       <div class="istr-step"><div class="istr-num">4</div><div class="istr-step-testo"><strong>Fatto!</strong><span>Trovi l'icona <strong>Riscossione</strong> nella schermata Home. Da adesso aprila sempre da lì.</span></div></div>
       <div class="istr-nota">💡 <strong>Ogni giorno</strong> carica solo il nuovo file Excel dalla mail. Il file HTML dell'app non cambia mai.</div>
     </div>
@@ -456,7 +456,6 @@ function aggiornaLista() {
     const div = document.createElement('div');
     div.className = `cliente-card${completato ? ' completato' : parziale ? ' parziale' : ''}`;
     div.innerHTML = `
-      <div class="cliente-avatar">${iniziali}</div>
       <div class="cliente-info">
         <div class="cliente-nome">${c.ragione}</div>
         <div class="cliente-codice">${c.codice} · ${c.citta} ${c.provincia}</div>
@@ -494,12 +493,13 @@ function renderFatture() {
     div.innerHTML = `
       <div class="fattura-top">
         <div>
-          <div class="fattura-doc">${r['Sigla Doc'] || ''} N. ${r['Num Doc'] || ''}</div>
+          <div class="fattura-doc">Partita ${r['Sigla Doc'] || ''}</div>
           <div class="fattura-meta">
-            <span>Doc: ${formatData(r['Data Doc'])}</span>
-            <span>Scad: ${formatData(r['Data Scad'])}</span>
+            <span>Data Reg: ${formatData(r['Data Reg'])}</span>
+            <span>Data Doc: ${formatData(r['Data Doc'])}</span>
+            <span>Data Scad: ${formatData(r['Data Scad'])}</span>
           </div>
-          ${r['Descrizione'] ? `<div class="fattura-desc">${r['Descrizione']}</div>` : ''}
+          ${r['Descrizione'] ? `<div class="fattura-desc"><strong>Descrizione</strong> ${r['Descrizione']}</div>` : ''}
         </div>
         <div class="fattura-importo">€ ${importo.toLocaleString('it-IT', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
       </div>
@@ -523,11 +523,13 @@ function renderFatture() {
 
 function formatData(val) {
   if (!val) return '—';
-  if (typeof val === 'string' && val.includes('-')) {
-    const p = val.split('-');
-    if (p.length === 3) return `${p[2].substring(0,2)}/${p[1]}/${p[0]}`;
+  // Gestisce formato "2025-11-03 00:00:00" o "2025-11-03T00:00:00"
+  const str = String(val).split(' ')[0].split('T')[0];
+  if (str.includes('-')) {
+    const p = str.split('-');
+    if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
   }
-  return val;
+  return str;
 }
 
 // ---- MODAL PAGAMENTO ----
@@ -611,6 +613,8 @@ function scaricaExcel() {
 }
 
 function generaWorkbook() {
+  const ora = new Date();
+  const dataOraInvio = `${pad(ora.getDate())}/${pad(ora.getMonth()+1)}/${ora.getFullYear()} ${pad(ora.getHours())}:${pad(ora.getMinutes())}`;
   const headers = Object.keys(dati.righe[0]).filter(k => k !== '_indice');
   const righeOut = dati.righe.map((r, i) => {
     const out = { ...r };
@@ -623,6 +627,8 @@ function generaWorkbook() {
       out['Incassata SI/No'] = '';
       out['Data/ora Incasso'] = '';
     }
+    out['Inviato SI/No'] = 'SI';
+    out['Data/ora Invio'] = dataOraInvio;
     return out;
   });
   const ws = XLSX.utils.json_to_sheet(righeOut);
